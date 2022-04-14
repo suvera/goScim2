@@ -1,4 +1,4 @@
-# SCIM 2.0 GO SDK
+# SCIM 2.0 GO SDK (GO-lang)
 
 System for Cross-domain Identity Management (**SCIM**) specification is designed to make managing 
 user identities in cloud-based applications and services easier. The specification suite seeks to 
@@ -21,12 +21,11 @@ https://tools.ietf.org/html/rfc7644
 https://tools.ietf.org/html/rfc7643
 
 
-### JAVA SDK
+#### JAVA SDK
 
 You can find Java SDK here
 
 https://github.com/suvera/scim2-sdk
-
 
 
 ## Installation
