@@ -1,5 +1,11 @@
 package scim2
 
+import (
+	"github.com/sirupsen/logrus"
+)
+
+var log = logrus.New()
+
 const Author = "suvera"
 
 const URN_LIST_RESPONSE = "urn:ietf:params:scim:api:messages:2.0:ListResponse"

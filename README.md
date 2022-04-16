@@ -30,123 +30,50 @@ https://github.com/suvera/scim2-sdk
 
 ## Installation
 
-This repo contains three components/libraries **schema**, **client** and **server** that supports scim2 protocol.
+This repo contains three components **client** and **server** that supports scim2 protocol.
 
 These libraries can be included in any of your GO applications.
 
 ```
-# clone the repo
-
-cd scim2-sdk
-
-mvn clean install
+go get -u github.com/suvera/goScim2
 
 ```
 
-## scim2-sdk-schema
 
-This library contains SCIM 2.0 protocol definitions, json schemas, resources, and helper utilities. 
-
-```
-<dependency>
-    <groupId>dev.suvera.scim2</groupId>
-    <artifactId>scim2-sdk-schema</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
-
-
-## scim2-sdk-client
+## SCIM2 Client
 
 This library contains SCIM 2.0 compatible Http client.
-
-```
-<dependency>
-    <groupId>dev.suvera.scim2</groupId>
-    <artifactId>scim2-sdk-client</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
-```
-
 
 You can build a **client** object like below.
 
 ```
-Scim2Client client = new Scim2ClientBuilder("http://localhost:8880/scim2")
-    .usernamePassword("username", "password").
-    .bearerToken("OR, Bearer Auth token here")
-    .allowSelfSigned(true)
-    .build()
-;
-
-
-sp = client.getSpConfig();
-ressourceTypes = client.getResourceTypes();
-schemas = client.getSchemas();
-
-
-userResourceType = client.getResourceType("urn:ietf:params:scim:schemas:core:2.0:User");
-userSchema = client.getSchema("urn:ietf:params:scim:schemas:core:2.0:User");
-
-
-# User operations
-client.createUser(UserRecord record);
-client.readUser(String userId);
-client.replaceUser(String userId, UserRecord record);
-client.deleteUser(String userId);
-client.patchUser(String id, PatchRequest<UserRecord> request);
-
-# Group operations
-client.createGroup(GroupRecord record);
-client.readGroup(String groupId);
-client.replaceGroup(String groupId, GroupRecord record);
-client.deleteGroup(String groupId);
-client.patchGroup(String id, PatchRequest<GroupRecord> request);
-
-
-# Generic methods - for any custom resource
-client.create(T record, ResourceType resourceType);
-client.read(String id, Class<T> cls, ResourceType resourceType);
-client.replace(String id, T record, ResourceType resourceType);
-client.delete(String id, ResourceType resourceType);
-client.patch(String id, PatchRequest<T> request, ResourceType resourceType);
-client.search(SearchRequest request, Class<T> cls, ResourceType resourceType);
-
-
-# Root level SCIM Operations
-client.bulk(BulkRequest request);
-client.search(SearchRequest request);
-
+TODO: working on
 
 ```
 
-Check the **Scim2Client.java** interface for more information.
 
+## SCIM2 Server
 
-## scim2-sdk-server
-
-This is a Spring Boot library, can be added to your boot application like below.
+scim can be enabled in your server like below
 
 ```
-<dependency>
-    <groupId>dev.suvera.scim2</groupId>
-    <artifactId>scim2-sdk-server</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-</dependency>
+import (
+    "http"
+    "github.com/gorilla/mux"
+    "github.com/suvera/goScim2/scim2"
+)
+
+
+r := mux.NewRouter()
+
+d := scim2.DefaultHandler{}
+
+scim2.Server("/scim2", r, d)
+
+http.ListenAndServe(":8090", r)
 ``` 
 
-- You need to implement interfaces defined in **service** package of scim2-sdk-server.  Check the package code for more details.
-
-- Append **"dev.suvera.scim2.server"** package to **scanBasePackages** config option of SpringBootApplication like below.
-         
-```
-@SpringBootApplication(scanBasePackages = {"dev.suvera.scim2.server", "your packages here ..."})
-
-```
-
-### Example:
-
-There is an example server implementation [scim2-sdk-server-example](scim2-sdk-server-example) for more information.
+- You need to implement interface defined in **scim2.RequestHandler** for full compatibility. **scim2.DefaultHandler** is default implementation.
 
 
 ## Is your server is compliant to SCIM 2.0?

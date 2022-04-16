@@ -27,9 +27,9 @@ const (
 type PatchOp string
 
 const (
-	PatchOp۰ADD     PatchOp = "ADD"
-	PatchOp۰REMOVE  PatchOp = "REMOVE"
-	PatchOp۰REPLACE PatchOp = "REPLACE"
+	PatchOp۰ADD     PatchOp = "add"
+	PatchOp۰REMOVE  PatchOp = "remove"
+	PatchOp۰REPLACE PatchOp = "replace"
 )
 
 type ReturnedType string
