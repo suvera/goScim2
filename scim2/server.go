@@ -73,9 +73,21 @@ const (
 )
 
 type RequestCtx struct {
-	Response http.ResponseWriter
-	Request  *http.Request
-	PathId   PathIdType
+	Response   http.ResponseWriter
+	Request    *http.Request
+	PathId     PathIdType
+	PathPrefix string
+}
+
+func (ctx *RequestCtx) ScimBaseUrl() string {
+	protocol := "https://"
+	if ctx.Request.TLS == nil {
+		protocol = "http://"
+	}
+	if ctx.PathPrefix == "/" {
+		return protocol + ctx.Request.Host
+	}
+	return protocol + ctx.Request.Host + ctx.PathPrefix
 }
 
 type ProtocolHandler interface {
@@ -141,7 +153,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdSchema: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find Schema ID in the URL Path")
 		}
 
@@ -152,7 +164,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdResoruceType: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find ResourceType ID in the URL Path")
 		}
 
@@ -176,7 +188,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdUserUpdate: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find User ID in the URL Path")
 		}
 
@@ -191,7 +203,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdUserPatch: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find User ID in the URL Path")
 		}
 
@@ -206,7 +218,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdUserDelete: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find User ID in the URL Path")
 		}
 
@@ -214,7 +226,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdUserRead: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find User ID in the URL Path")
 		}
 
@@ -240,7 +252,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdGroupUpdate: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find Group ID in the URL Path")
 		}
 
@@ -255,7 +267,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdGroupPatch: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find Group ID in the URL Path")
 		}
 
@@ -270,7 +282,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdGroupDelete: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find Group ID in the URL Path")
 		}
 
@@ -278,7 +290,7 @@ var pathHandleMap = map[PathIdType]interface{}{
 	},
 	PathIdGroupRead: func(ctx *RequestCtx, rh RequestHandler) Error {
 		vars := mux.Vars(ctx.Request)
-		if _, ok := vars["Id"]; ok {
+		if _, ok := vars["Id"]; !ok {
 			return BadRequest("Could not find Group ID in the URL Path")
 		}
 
@@ -294,12 +306,13 @@ var pathHandleMap = map[PathIdType]interface{}{
 }
 
 type requestServer struct {
-	pathId PathIdType
-	rh     RequestHandler
+	pathId     PathIdType
+	rh         RequestHandler
+	pathPrefix string
 }
 
 func (s *requestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := &RequestCtx{Response: w, Request: r, PathId: s.pathId}
+	ctx := &RequestCtx{Response: w, Request: r, PathId: s.pathId, PathPrefix: s.pathPrefix}
 
 	log.Println("Serving SCIM2 request:", s.pathId, r.RequestURI)
 
@@ -328,124 +341,59 @@ func (s *requestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.rh.PostHandle(ctx)
 }
 
-func newReqHandler(pathId PathIdType, rh RequestHandler) func(w http.ResponseWriter, r *http.Request) {
+func newReqHandler(
+	pathId PathIdType,
+	rh RequestHandler,
+	pathPrefix string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rs := requestServer{pathId, rh}
+		rs := requestServer{pathId: pathId, rh: rh, pathPrefix: pathPrefix}
 		rs.ServeHTTP(w, r)
 	}
 }
 
 func Server(pathPrefix string, r *mux.Router, rh RequestHandler) {
+	r.MethodNotAllowedHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		AddScim2DefaultHeaders(w)
+		ErrorResponse(w, NewError(http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed), ""))
+	})
+
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		AddScim2DefaultHeaders(w)
+		ErrorResponse(w, NewError(http.StatusNotFound, http.StatusText(http.StatusNotFound), ""))
+	})
+
 	log.Out = os.Stdout
 	log.Formatter = &logrus.TextFormatter{}
 	log.Level = logrus.InfoLevel
 
-	pathPrefix = "/" + strings.Trim(pathPrefix, `/`)
+	pf := "/" + strings.Trim(pathPrefix, `/`)
 
 	// 1. Schema Paths
-	r.HandleFunc(pathPrefix+PATH_SP, newReqHandler(PathIdSpc, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_SCHEMAS, newReqHandler(PathIdSchemas, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_SCHEMA+"/{Id}", newReqHandler(PathIdSchema, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_RESOURCETYPES, newReqHandler(PathIdResoruceTypes, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_RESOURCETYPE+"/Id", newReqHandler(PathIdResoruceType, rh)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_SP, newReqHandler(PathIdSpc, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_SCHEMAS, newReqHandler(PathIdSchemas, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_SCHEMAS+"/{Id}", newReqHandler(PathIdSchema, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_RESOURCETYPES, newReqHandler(PathIdResoruceTypes, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_RESOURCETYPES+"/{Id}", newReqHandler(PathIdResoruceType, rh, pf)).Methods(http.MethodGet)
 
 	// 2. Misc Paths
-	r.HandleFunc(pathPrefix+"/"+PATH_SEARCH, newReqHandler(PathIdSearch, rh)).Methods(http.MethodPost)
-	r.HandleFunc(pathPrefix+PATH_BULK, newReqHandler(PathIdBulk, rh)).Methods(http.MethodPost)
+	r.HandleFunc(pf+"/"+PATH_SEARCH, newReqHandler(PathIdSearch, rh, pf)).Methods(http.MethodPost)
+	r.HandleFunc(pf+PATH_BULK, newReqHandler(PathIdBulk, rh, pf)).Methods(http.MethodPost)
 
 	// 3.User Paths
-	r.HandleFunc(pathPrefix+PATH_USERS, newReqHandler(PathIdUserCreate, rh)).Methods(http.MethodPost)
-	r.HandleFunc(pathPrefix+PATH_USERS+"/{Id}", newReqHandler(PathIdUserUpdate, rh)).Methods(http.MethodPut)
-	r.HandleFunc(pathPrefix+PATH_USERS+"/{Id}", newReqHandler(PathIdUserPatch, rh)).Methods(http.MethodPatch)
-	r.HandleFunc(pathPrefix+PATH_USERS+"/{Id}", newReqHandler(PathIdUserDelete, rh)).Methods(http.MethodDelete)
-	r.HandleFunc(pathPrefix+PATH_USERS+"/{Id}", newReqHandler(PathIdUserRead, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_USERS+"/"+PATH_SEARCH, newReqHandler(PathIdUserSearch, rh)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_USERS, newReqHandler(PathIdUserCreate, rh, pf)).Methods(http.MethodPost)
+	r.HandleFunc(pf+PATH_USERS+"/{Id}", newReqHandler(PathIdUserUpdate, rh, pf)).Methods(http.MethodPut)
+	r.HandleFunc(pf+PATH_USERS+"/{Id}", newReqHandler(PathIdUserPatch, rh, pf)).Methods(http.MethodPatch)
+	r.HandleFunc(pf+PATH_USERS+"/{Id}", newReqHandler(PathIdUserDelete, rh, pf)).Methods(http.MethodDelete)
+	r.HandleFunc(pf+PATH_USERS+"/{Id}", newReqHandler(PathIdUserRead, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_USERS+"/"+PATH_SEARCH, newReqHandler(PathIdUserSearch, rh, pf)).Methods(http.MethodGet)
 
 	// 4. Group Paths
-	r.HandleFunc(pathPrefix+PATH_GROUPS, newReqHandler(PathIdGroupCreate, rh)).Methods(http.MethodPost)
-	r.HandleFunc(pathPrefix+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupUpdate, rh)).Methods(http.MethodPut)
-	r.HandleFunc(pathPrefix+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupPatch, rh)).Methods(http.MethodPatch)
-	r.HandleFunc(pathPrefix+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupDelete, rh)).Methods(http.MethodDelete)
-	r.HandleFunc(pathPrefix+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupRead, rh)).Methods(http.MethodGet)
-	r.HandleFunc(pathPrefix+PATH_GROUPS+"/"+PATH_SEARCH, newReqHandler(PathIdGroupSearch, rh)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_GROUPS, newReqHandler(PathIdGroupCreate, rh, pf)).Methods(http.MethodPost)
+	r.HandleFunc(pf+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupUpdate, rh, pf)).Methods(http.MethodPut)
+	r.HandleFunc(pf+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupPatch, rh, pf)).Methods(http.MethodPatch)
+	r.HandleFunc(pf+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupDelete, rh, pf)).Methods(http.MethodDelete)
+	r.HandleFunc(pf+PATH_GROUPS+"/{Id}", newReqHandler(PathIdGroupRead, rh, pf)).Methods(http.MethodGet)
+	r.HandleFunc(pf+PATH_GROUPS+"/"+PATH_SEARCH, newReqHandler(PathIdGroupSearch, rh, pf)).Methods(http.MethodGet)
 
 	log.Println("SCIM2 Path(s) Added")
-}
-
-// Default Server Handler
-type DefaultHandler struct {
-}
-
-func (d DefaultHandler) HandleSPC(ctx *RequestCtx) Error {
-	return NoError
-}
-func (d DefaultHandler) HandleSchemas(ctx *RequestCtx) Error {
-	b, err := json.MarshalIndent(DefaultSchemas(), "", "  ")
-	if err != nil {
-		return NewError(http.StatusInternalServerError, err.Error(), "")
-	}
-
-	ctx.Response.WriteHeader(http.StatusOK)
-	fmt.Fprint(ctx.Response, string(b))
-	return NoError
-}
-func (d DefaultHandler) HandleSchema(ctx *RequestCtx, id string) Error {
-	return NoError
-}
-func (d DefaultHandler) HandleResourceTypes(ctx *RequestCtx) Error {
-	return NoError
-}
-func (d DefaultHandler) HandleResourceType(ctx *RequestCtx, id string) Error {
-	return NoError
-}
-
-func (d DefaultHandler) PreHandle(*RequestCtx) (bool, Error) {
-	return true, NoError
-}
-func (d DefaultHandler) PostHandle(*RequestCtx) {
-}
-
-// Not Implemeneted Here, but developer must implement it in their projects!
-func (d DefaultHandler) HandleBulk(ctx *RequestCtx) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleSearch(ctx *RequestCtx) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserCreate(ctx *RequestCtx, user UserRecord) Error {
-	log.Println("I am here")
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserUpdate(ctx *RequestCtx, id string, user UserRecord) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserPatch(ctx *RequestCtx, id string, patch UserPatchRequest) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserDelete(ctx *RequestCtx, id string) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserRead(ctx *RequestCtx, id string) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleUserSearch(ctx *RequestCtx, search SearchRequest) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupCreate(ctx *RequestCtx, group GroupRecord) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupUpdate(ctx *RequestCtx, id string, group GroupRecord) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupPatch(ctx *RequestCtx, id string, patch GroupPatchRequest) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupDelete(ctx *RequestCtx, id string) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupRead(ctx *RequestCtx, id string) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
-}
-func (d DefaultHandler) HandleGroupSearch(ctx *RequestCtx, search SearchRequest) Error {
-	return NotImplemented(http.StatusText(http.StatusNotImplemented))
 }

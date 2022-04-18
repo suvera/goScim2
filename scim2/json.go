@@ -22,6 +22,7 @@ func (j JsonDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(j))
 }
 
-func toJsonDate(secs int64) JsonDate {
-	return JsonDate(time.Unix(secs, 0))
+func toJsonDate(secs int64) *JsonDate {
+	a := JsonDate(time.Unix(secs, 0))
+	return &a
 }
