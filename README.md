@@ -65,9 +65,9 @@ import (
 
 
 r := mux.NewRouter()
-
 d := scim2.DefaultHandler{}
 
+# API path prefix "/scim2"
 scim2.Server("/scim2", r, d)
 
 http.ListenAndServe(":8090", r)
@@ -75,6 +75,19 @@ http.ListenAndServe(":8090", r)
 
 - You need to implement interface defined in **scim2.RequestHandler** for full compatibility. **scim2.DefaultHandler** is default implementation.
 
+
+#### Tests
+
+```shell
+curl http://localhost:8090/scim2/ServiceProviderConfig
+
+curl http://localhost:8090/scim2/Schemas
+
+curl http://localhost:8090/scim2/Users
+
+curl http://localhost:8090/scim2/Groups
+
+```
 
 ## Is your server is compliant to SCIM 2.0?
 

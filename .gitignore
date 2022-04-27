@@ -4,6 +4,11 @@
 *.dll
 *.so
 *.dylib
+goScim2.iml
+misc.xml
+modules.xml
+vcsm.xml
+.idea
 
 # Test binary, built with `go test -c`
 *.test
