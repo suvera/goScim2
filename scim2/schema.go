@@ -298,3 +298,20 @@ type ResourceType struct {
 	Schema           string      `json:"schema,omitempty"`
 	SchemaExtensions []SchemaExt `json:"schemaExtensions,omitempty"`
 }
+
+type ScimError struct {
+	Status   int      `json:"status,omitempty"`
+	Detail   string   `json:"detail,omitempty"`
+	ScimType string   `json:"scimType,omitempty"`
+	Schemas  []string `json:"schemas,omitempty"`
+}
+
+type NullObject struct {
+}
+
+var NullObjectInstance = NullObject{}
+
+type DbFilterClause struct {
+	WhereClause string         `json:"whereClause,omitempty"`
+	Binds       map[string]any `json:"binds,omitempty"`
+}
