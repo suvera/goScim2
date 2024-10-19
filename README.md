@@ -96,7 +96,7 @@ SCIM search **filter** parsing capability also provided. You can convert SCIM fi
 Check the [mysql_filter.go](scim2/mysql/mysql_filter.go) for example implementation.
 
 ```java
-c := mysql.FilterConverter();
+c := mysql.NewMysqlFilterConverter();
 c.convert("userName co \"bjensen\"", Map.of("userName", "user_name"));
 
 clause := c.GetClause();
