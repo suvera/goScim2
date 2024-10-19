@@ -22,21 +22,21 @@ func (this *ErrorListener) SyntaxError(recognizer antlr.Recognizer, offendingSym
 }
 
 func (this *ErrorListener) ReportAmbiguity(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex int, exact bool, ambigAlts *antlr.BitSet, configs *antlr.ATNConfigSet) {
-	this.Errors = append(this.Errors, NewScimError(400,
-		"Ambiguity error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
-		"invalidFilter"))
+	//this.Errors = append(this.Errors, NewScimError(400,
+	//	"Ambiguity error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
+	//	"invalidFilter"))
 }
 
 func (this *ErrorListener) ReportAttemptingFullContext(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex int, conflictingAlts *antlr.BitSet, configs *antlr.ATNConfigSet) {
-	this.Errors = append(this.Errors, NewScimError(400,
-		"Attempting full context error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
-		"invalidFilter"))
+	//this.Errors = append(this.Errors, NewScimError(400,
+	//	"Attempting full context error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
+	//	"invalidFilter"))
 }
 
 func (this *ErrorListener) ReportContextSensitivity(recognizer antlr.Parser, dfa *antlr.DFA, startIndex, stopIndex, prediction int, configs *antlr.ATNConfigSet) {
-	this.Errors = append(this.Errors, NewScimError(400,
-		"Context sensitivity error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
-		"invalidFilter"))
+	//this.Errors = append(this.Errors, NewScimError(400,
+	//	"Context sensitivity error at line "+cast.ToString(startIndex)+" char "+cast.ToString(stopIndex),
+	//	"invalidFilter"))
 }
 
 func (this *ErrorListener) HasErrors() bool {

@@ -89,6 +89,21 @@ curl http://localhost:8090/scim2/Groups
 
 ```
 
+#### SCIM Filter Parsing
+
+SCIM search **filter** parsing capability also provided. You can convert SCIM filter to SQL where clause.
+
+Check the [mysql_filter.go](scim2/mysql/mysql_filter.go) for example implementation.
+
+```java
+c := mysql.FilterConverter();
+c.convert("userName co \"bjensen\"", Map.of("userName", "user_name"));
+
+clause := c.GetClause();
+fmt.printf("WHERE clause: %v\n", clause.WhereClause);
+fmt.printf("Bind Variables: %v\n", clause.Binds);
+```
+
 ## Is your server is compliant to SCIM 2.0?
 
 Here is the tool to test the compliance level  https://github.com/suvera/scim2-compliance-test-utility

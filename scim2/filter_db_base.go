@@ -5,7 +5,7 @@ import "github.com/spf13/cast"
 const bindPrefix = "svr_"
 
 type DbFilterConverter interface {
-	Convert(filter string, columnMappings map[string]string)
+	Convert(filter string, columnMappings map[string]string) *ScimError
 	GetClause() DbFilterClause
 	GetMappedColumn(expression *AttributeExpression) string
 }
@@ -33,7 +33,7 @@ func (b *BaseDbFilterConverter) GetClause() DbFilterClause {
 	return b.Clause
 }
 
-func (b *BaseDbFilterConverter) Convert(filter string, columnMappings map[string]string) {
+func (b *BaseDbFilterConverter) Convert(filter string, columnMappings map[string]string) *ScimError {
 	b.ColumnMappings = columnMappings
 	panic("implement BaseDbFilterConverter.Convert method")
 }

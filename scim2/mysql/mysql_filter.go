@@ -15,14 +15,14 @@ func NewMysqlFilterConverter() *FilterConverter {
 	return &FilterConverter{}
 }
 
-func (f *FilterConverter) Convert(filter string, columnMappings map[string]string) {
+func (f *FilterConverter) Convert(filter string, columnMappings map[string]string) *scim2.ScimError {
 	f.ColumnMappings = columnMappings
 	f.Clause = scim2.DbFilterClause{
 		WhereClause: "",
 		Binds:       make(map[string]any),
 	}
 
-	scim2.ParseFilter(filter, f)
+	return scim2.ParseFilter(filter, f)
 }
 
 func (f *FilterConverter) OnAttributeExpression(expression *scim2.AttributeExpression) {
